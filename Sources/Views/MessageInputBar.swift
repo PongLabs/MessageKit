@@ -234,6 +234,9 @@ open class MessageInputBar: UIView {
         }
     }
     
+    /// Holds the InputManager plugins that can be used to extend the functionality of the InputBarAccessoryView
+    open var inputManagers = [InputManager]()
+    
     /// The InputBarItems held in the leftStackView
     public private(set) var leftStackViewItems: [InputBarButtonItem] = []
     
@@ -634,5 +637,6 @@ open class MessageInputBar: UIView {
     open func didSelectSendButton() {
         delegate?.messageInputBar(self, didPressSendButtonWith: inputTextView.text)
         textViewDidChange()
+        inputManagers.forEach { $0.invalidate() }
     }
 }
