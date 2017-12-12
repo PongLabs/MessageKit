@@ -1,3 +1,4 @@
+
 /*
  MIT License
 
@@ -33,12 +34,6 @@ open class MessagesViewController: UIViewController {
 
     /// The `MessageInputBar` used as the `inputAccessoryView` in the view controller.
     open var messageInputBar = MessageInputBar()
-    
-    /// A Boolean value that determines whether the `MessagesCollectionView` scrolls to the
-    /// bottom on the view's first layout.
-    ///
-    /// The default value of this property is `false`.
-    open var scrollsToBottomOnFirstLayout: Bool = false
 
     /// A Boolean value that determines whether the `MessagesCollectionView` scrolls to the
     /// bottom whenever the `InputTextView` begins editing.
@@ -66,13 +61,11 @@ open class MessagesViewController: UIViewController {
     open override func viewDidLoad() {
         super.viewDidLoad()
 
-        
         extendedLayoutIncludesOpaqueBars = true
         automaticallyAdjustsScrollViewInsets = false
         view.backgroundColor = .white
         messagesCollectionView.keyboardDismissMode = .interactive
         messagesCollectionView.alwaysBounceVertical = true
-        
         
         setupSubviews()
         setupConstraints()
@@ -89,11 +82,6 @@ open class MessagesViewController: UIViewController {
             addKeyboardObservers()
             messagesCollectionView.contentInset.bottom = keyboardOffsetFrame.height
             messagesCollectionView.scrollIndicatorInsets.bottom = keyboardOffsetFrame.height
-            
-            //Scroll to bottom at first load
-            if scrollsToBottomOnFirstLayout {
-                messagesCollectionView.scrollToBottom(animated: false)
-            }
         }
     }
 
@@ -222,23 +210,47 @@ extension MessagesViewController: UICollectionViewDataSource {
             fatalError("MessagesDataSource has not been set.")
         }
 
+        guard let displayDelegate = messagesCollectionView.messagesDisplayDelegate else {
+            fatalError("MessagesDisplayDelegate has not been set.")
+        }
+
         let message = messagesDataSource.messageForItem(at: indexPath, in: messagesCollectionView)
+        let avatar = messagesDataSource.avatar(for: message, at: indexPath, in: messagesCollectionView)
+        let bottomText = messagesDataSource.cellBottomLabelAttributedText(for: message, at: indexPath)
+        let topText = messagesDataSource.cellTopLabelAttributedText(for: message, at: indexPath)
+        let style = displayDelegate.messageStyle(for: message, at: indexPath, in: messagesCollectionView)
+        let backgroundColor = displayDelegate.backgroundColor(for: message, at: indexPath, in: messagesCollectionView)
+
+        let commonConfigure = { (cell: MessageCollectionViewCell) in
+            cell.messageContainerView.style = style
+            cell.messageContainerView.backgroundColor = backgroundColor
+            cell.configureAvatar(avatar)
+            cell.configureAccessoryLabels(topText, bottomText)
+            cell.delegate = messagesCollectionView.messageCellDelegate
+        }
 
         switch message.data {
         case .text, .attributedText, .emoji:
             let cell = messagesCollectionView.dequeueReusableCell(TextMessageCell.self, for: indexPath)
-            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
+            let detectors = displayDelegate.enabledDetectors(for: message, at: indexPath, in: messagesCollectionView)
+            let textColor = displayDelegate.textColor(for: message, at: indexPath, in: messagesCollectionView)
+            cell.configure(message, textColor, detectors)
+            commonConfigure(cell)
             return cell
         case .photo, .video:
     	    let cell = messagesCollectionView.dequeueReusableCell(MediaMessageCell.self, for: indexPath)
-            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
+            cell.configure(message)
+            commonConfigure(cell)
             return cell
-        case .location:
+        case .location(let location):
     	    let cell = messagesCollectionView.dequeueReusableCell(LocationMessageCell.self, for: indexPath)
-            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
+            let options = displayDelegate.snapshotOptionsForLocation(message: message, at: indexPath, in: messagesCollectionView)
+            let annotationView = displayDelegate.annotationViewForLocation(message: message, at: indexPath, in: messagesCollectionView)
+            let animationBlock = displayDelegate.animationBlockForLocation(message: message, at: indexPath, in: messagesCollectionView)
+            cell.configure(location, options, annotationView, animationBlock)
+            commonConfigure(cell)
             return cell
         }
-
     }
 
     open func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
@@ -265,9 +277,7 @@ extension MessagesViewController: UICollectionViewDataSource {
         default:
             fatalError("Unrecognized element of kind: \(kind)")
         }
-
     }
-    
 }
 
 // MARK: - Keyboard Handling
@@ -276,26 +286,26 @@ fileprivate extension MessagesViewController {
 
     func addKeyboardObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(handleKeyboardDidChangeState), name: .UIKeyboardWillChangeFrame, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleTextViewDidBeginEditing), name: .UITextViewTextDidBeginEditing, object: messageInputBar.inputTextView)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleTextViewDidBeginEditing), name: .UITextViewTextDidBeginEditing, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(adjustScrollViewInset), name: .UIDeviceOrientationDidChange, object: nil)
     }
 
     func removeKeyboardObservers() {
         NotificationCenter.default.removeObserver(self, name: .UIKeyboardWillChangeFrame, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .UITextViewTextDidBeginEditing, object: messageInputBar.inputTextView)
+        NotificationCenter.default.removeObserver(self, name: .UITextViewTextDidBeginEditing, object: nil)
         NotificationCenter.default.removeObserver(self, name: .UIDeviceOrientationDidChange, object: nil)
     }
 
     @objc
     func handleTextViewDidBeginEditing(_ notification: Notification) {
         if scrollsToBottomOnKeybordBeginsEditing {
+            guard let inputTextView = notification.object as? InputTextView, inputTextView === messageInputBar.inputTextView else { return }
             messagesCollectionView.scrollToBottom(animated: true)
         }
     }
 
     @objc
     func handleKeyboardDidChangeState(_ notification: Notification) {
-
         guard let keyboardEndFrame = notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? CGRect else { return }
 
         if (keyboardEndFrame.origin.y + keyboardEndFrame.size.height) > UIScreen.main.bounds.height {
@@ -310,7 +320,6 @@ fileprivate extension MessagesViewController {
             messagesCollectionView.contentInset.bottom = bottomInset
             messagesCollectionView.scrollIndicatorInsets.bottom = bottomInset
         }
-        
     }
     
     fileprivate var keyboardOffsetFrame: CGRect {
