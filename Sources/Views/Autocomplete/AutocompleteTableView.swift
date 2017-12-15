@@ -30,7 +30,7 @@ import UIKit
 open class AutocompleteTableView: UITableView {
     
     /// The maximum number of visible rows before the user has to scroll throught them.
-    var maximumVisibleRows: Int = 3
+    var maximumVisibleRows: Double = 3.5
     
     // -----------------------------------
     // MARK: - Initializers
@@ -49,7 +49,7 @@ open class AutocompleteTableView: UITableView {
     open override var intrinsicContentSize: CGSize {
         
         let size = super.intrinsicContentSize
-        let rows = min(numberOfRows(inSection: 0), maximumVisibleRows)
+        let rows = min(Double(numberOfRows(inSection: 0)), maximumVisibleRows)
         let height = CGFloat(rows) * rowHeight
         return CGSize(width: size.width, height: height)
     }

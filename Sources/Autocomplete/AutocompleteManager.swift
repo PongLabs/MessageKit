@@ -47,7 +47,7 @@ open class AutocompleteManager: NSObject {
     open var isCaseSensitive = false
     
     /// The maximum number of visible rows in the `tableView` before the user has to scroll throught them.
-    open var maximumVisibleRows: Int {
+    open var maximumVisibleRows: Double {
         get { return self.tableView.maximumVisibleRows }
         set { self.tableView.maximumVisibleRows = newValue }
     }
