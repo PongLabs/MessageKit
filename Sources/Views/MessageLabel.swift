@@ -305,15 +305,30 @@ open class MessageLabel: UILabel {
 
     private func parse(text: NSAttributedString) -> [NSTextCheckingResult] {
         guard enabledDetectors.isEmpty == false else { return [] }
+        
         let checkingTypes = enabledDetectors.reduce(0) { $0 | $1.textCheckingType.rawValue }
-        let detector = try? NSDataDetector(types: checkingTypes)
         let range = NSRange(location: 0, length: text.length)
-        return detector?.matches(in: text.string, options: [], range: range) ?? []
+        
+        // Look for matches in the string
+        var results: [NSTextCheckingResult] = []
+        if let detector = try? NSDataDetector(types: checkingTypes) {
+            let matches = detector.matches(in: text.string, options: [], range: range)
+            results.append(contentsOf: matches)
+        }
+        
+        // Also look for manually inputed links
+        text.enumerateAttributes(in: range, options: NSAttributedString.EnumerationOptions(rawValue: 0)) { (attrs, range, _) in
+            guard let url = attrs[.link] as? URL else {
+                return
+            }
+            
+            let result = NSTextCheckingResult.linkCheckingResult(range: range, url: url)
+            results.append(result)
+        }
+        return results
     }
 
     private func setRangesForDetectors(in checkingResults: [NSTextCheckingResult]) {
-
-        guard checkingResults.isEmpty == false else { return }
         
         for result in checkingResults {
 
