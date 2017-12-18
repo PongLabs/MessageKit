@@ -67,7 +67,7 @@ open class MessagesCollectionView: UICollectionView {
         let collectionViewContentHeight = collectionViewLayout.collectionViewContentSize.height
 
         performBatchUpdates(nil) { _ in
-            self.scrollRectToVisible(CGRect(0.0, collectionViewContentHeight - 1.0, 1.0, 1.0), animated: animated)
+            self.scrollRectToVisible(CGRect(x: 0.0, y: collectionViewContentHeight - 1.0, width: 1.0, height: 1.0), animated: animated)
         }
     }
     
