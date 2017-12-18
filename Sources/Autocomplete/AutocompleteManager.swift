@@ -160,6 +160,7 @@ fileprivate extension AutocompleteManager {
         // Insert the text
         let range = NSMakeRange(prefixRange.lowerBound, String(prefix).count + foundWord.count)
         textView.text = (textView.text as? NSString)?.replacingCharacters(in: range, with: textToInsert)
+        textView.messageInputBar?.textViewDidChange()
 //        textView.text.removeSubrange(range).replaceSubrange(range, with: textToInsert)
         
         // Apply the highlight attributes

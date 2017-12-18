@@ -140,8 +140,9 @@ open class MessagesViewController: UIViewController {
         if #available(iOS 11.0, *) {
             // No need to add to the top contentInset
         } else {
+            let statusBarHeight = UIApplication.shared.statusBarFrame.height
             let navigationBarInset = navigationController?.navigationBar.frame.height ?? 0
-            let statusBarInset: CGFloat = UIApplication.shared.isStatusBarHidden ? 0 : 20
+            let statusBarInset: CGFloat = UIApplication.shared.isStatusBarHidden ? 0 : statusBarHeight
             let topInset = navigationBarInset + statusBarInset
             messagesCollectionView.contentInset.top = topInset
             messagesCollectionView.scrollIndicatorInsets.top = topInset
