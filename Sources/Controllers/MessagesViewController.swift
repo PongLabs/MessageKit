@@ -40,6 +40,12 @@ open class MessagesViewController: UIViewController {
     ///
     /// The default value of this property is `false`.
     open var scrollsToBottomOnKeybordBeginsEditing: Bool = false
+    
+    /// A Boolean value that determines whether the `MessagesCollectionView`
+    /// maintains it's current position when the height of the `MessageInputBar` changes.
+    ///
+    /// The default value of this property is `false`.
+    open var maintainPositionOnKeyboardFrameChanged: Bool = false
 
     open override var canBecomeFirstResponder: Bool {
         return true
@@ -55,6 +61,13 @@ open class MessagesViewController: UIViewController {
     
     /// A Boolean value used to determine if `viewDidLayoutSubviews()` has been called.
     private var isFirstLayout: Bool = true
+    
+    private var messageCollectionViewBottomInset: CGFloat = 0 {
+        didSet {
+            messagesCollectionView.contentInset.bottom = messageCollectionViewBottomInset
+            messagesCollectionView.scrollIndicatorInsets.bottom = messageCollectionViewBottomInset
+        }
+    }
 
     // MARK: - View Life Cycle
 
@@ -78,10 +91,8 @@ open class MessagesViewController: UIViewController {
         // Hack to prevent animation of the contentInset after viewDidAppear
         if isFirstLayout {
             defer { isFirstLayout = false }
-
             addKeyboardObservers()
-            messagesCollectionView.contentInset.bottom = keyboardOffsetFrame.height
-            messagesCollectionView.scrollIndicatorInsets.bottom = keyboardOffsetFrame.height
+            messageCollectionViewBottomInset = keyboardOffsetFrame.height
         }
     }
 
@@ -211,45 +222,20 @@ extension MessagesViewController: UICollectionViewDataSource {
             fatalError("MessagesDataSource has not been set.")
         }
 
-        guard let displayDelegate = messagesCollectionView.messagesDisplayDelegate else {
-            fatalError("MessagesDisplayDelegate has not been set.")
-        }
-
         let message = messagesDataSource.messageForItem(at: indexPath, in: messagesCollectionView)
-        let avatar = messagesDataSource.avatar(for: message, at: indexPath, in: messagesCollectionView)
-        let bottomText = messagesDataSource.cellBottomLabelAttributedText(for: message, at: indexPath)
-        let topText = messagesDataSource.cellTopLabelAttributedText(for: message, at: indexPath)
-        let style = displayDelegate.messageStyle(for: message, at: indexPath, in: messagesCollectionView)
-        let backgroundColor = displayDelegate.backgroundColor(for: message, at: indexPath, in: messagesCollectionView)
-
-        let commonConfigure = { (cell: MessageCollectionViewCell) in
-            cell.messageContainerView.style = style
-            cell.messageContainerView.backgroundColor = backgroundColor
-            cell.configureAvatar(avatar)
-            cell.configureAccessoryLabels(topText, bottomText)
-            cell.delegate = messagesCollectionView.messageCellDelegate
-        }
 
         switch message.data {
         case .text, .attributedText, .emoji:
             let cell = messagesCollectionView.dequeueReusableCell(TextMessageCell.self, for: indexPath)
-            let detectors = displayDelegate.enabledDetectors(for: message, at: indexPath, in: messagesCollectionView)
-            let textColor = displayDelegate.textColor(for: message, at: indexPath, in: messagesCollectionView)
-            cell.configure(message, textColor, detectors)
-            commonConfigure(cell)
+            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
             return cell
         case .photo, .video:
     	    let cell = messagesCollectionView.dequeueReusableCell(MediaMessageCell.self, for: indexPath)
-            cell.configure(message)
-            commonConfigure(cell)
+            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
             return cell
-        case .location(let location):
+        case .location:
     	    let cell = messagesCollectionView.dequeueReusableCell(LocationMessageCell.self, for: indexPath)
-            let options = displayDelegate.snapshotOptionsForLocation(message: message, at: indexPath, in: messagesCollectionView)
-            let annotationView = displayDelegate.annotationViewForLocation(message: message, at: indexPath, in: messagesCollectionView)
-            let animationBlock = displayDelegate.animationBlockForLocation(message: message, at: indexPath, in: messagesCollectionView)
-            cell.configure(location, options, annotationView, animationBlock)
-            commonConfigure(cell)
+            cell.configure(with: message, at: indexPath, and: messagesCollectionView)
             return cell
         }
     }
@@ -311,15 +297,18 @@ fileprivate extension MessagesViewController {
 
         if (keyboardEndFrame.origin.y + keyboardEndFrame.size.height) > UIScreen.main.bounds.height {
             // Hardware keyboard is found
-            let bottomInset = view.frame.size.height - keyboardEndFrame.origin.y - iPhoneXBottomInset
-            messagesCollectionView.contentInset.bottom = bottomInset
-            messagesCollectionView.scrollIndicatorInsets.bottom = bottomInset
-
+            messageCollectionViewBottomInset = view.frame.size.height - keyboardEndFrame.origin.y - iPhoneXBottomInset
         } else {
             //Software keyboard is found
-            let bottomInset = keyboardEndFrame.height > keyboardOffsetFrame.height ? (keyboardEndFrame.height - iPhoneXBottomInset) : keyboardOffsetFrame.height
-            messagesCollectionView.contentInset.bottom = bottomInset
-            messagesCollectionView.scrollIndicatorInsets.bottom = bottomInset
+            let afterBottomInset = keyboardEndFrame.height > keyboardOffsetFrame.height ? (keyboardEndFrame.height - iPhoneXBottomInset) : keyboardOffsetFrame.height
+            let differenceOfBottomInset = afterBottomInset - messageCollectionViewBottomInset
+            let contentOffset = CGPoint(x: messagesCollectionView.contentOffset.x, y: messagesCollectionView.contentOffset.y + differenceOfBottomInset)
+
+            if maintainPositionOnKeyboardFrameChanged {
+                messagesCollectionView.setContentOffset(contentOffset, animated: false)
+            }
+
+            messageCollectionViewBottomInset = afterBottomInset
         }
     }
     

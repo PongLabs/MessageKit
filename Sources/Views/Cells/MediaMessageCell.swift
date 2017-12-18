@@ -32,7 +32,6 @@ open class MediaMessageCell: MessageCollectionViewCell {
 
     open lazy var playButtonView: PlayButtonView = {
         let playButtonView = PlayButtonView()
-        playButtonView.frame.size = CGSize(width: 35, height: 35)
         return playButtonView
     }()
 
@@ -43,6 +42,7 @@ open class MediaMessageCell: MessageCollectionViewCell {
     open func setupConstraints() {
         imageView.fillSuperview()
         playButtonView.centerInSuperview()
+        playButtonView.constraint(equalTo: CGSize(width: 35, height: 35))
     }
 
     open override func setupSubviews() {
@@ -52,7 +52,8 @@ open class MediaMessageCell: MessageCollectionViewCell {
         setupConstraints()
     }
 
-    open func configure(_ message: MessageType) {
+    open override func configure(with message: MessageType, at indexPath: IndexPath, and messagesCollectionView: MessagesCollectionView) {
+        super.configure(with: message, at: indexPath, and: messagesCollectionView)
         switch message.data {
         case .photo(let image):
             imageView.image = image
