@@ -46,6 +46,14 @@ open class MessagesViewController: UIViewController {
     ///
     /// The default value of this property is `false`.
     open var maintainPositionOnKeyboardFrameChanged: Bool = false
+    
+    open var outsideContentInset: UIEdgeInsets = .zero {
+        didSet { adjustScrollViewInset() }
+    }
+    
+    open var insideContentInset: UIEdgeInsets = .zero {
+        didSet { adjustScrollViewInset() }
+    }
 
     open override var canBecomeFirstResponder: Bool {
         return true
@@ -63,10 +71,7 @@ open class MessagesViewController: UIViewController {
     private var isFirstLayout: Bool = true
     
     private var messageCollectionViewBottomInset: CGFloat = 0 {
-        didSet {
-            messagesCollectionView.contentInset.bottom = messageCollectionViewBottomInset
-            messagesCollectionView.scrollIndicatorInsets.bottom = messageCollectionViewBottomInset
-        }
+        didSet { adjustScrollViewInset() }
     }
 
     // MARK: - View Life Cycle
@@ -148,16 +153,33 @@ open class MessagesViewController: UIViewController {
     
     @objc
     private func adjustScrollViewInset() {
+        
+        var topInset = outsideContentInset.top
         if #available(iOS 11.0, *) {
             // No need to add to the top contentInset
         } else {
+            // Top
             let statusBarHeight = UIApplication.shared.statusBarFrame.height
             let navigationBarInset = navigationController?.navigationBar.frame.height ?? 0
             let statusBarInset: CGFloat = UIApplication.shared.isStatusBarHidden ? 0 : statusBarHeight
-            let topInset = navigationBarInset + statusBarInset
-            messagesCollectionView.contentInset.top = topInset
-            messagesCollectionView.scrollIndicatorInsets.top = topInset
+            topInset += navigationBarInset + statusBarInset
         }
+        messagesCollectionView.contentInset.top = topInset + insideContentInset.top
+        messagesCollectionView.scrollIndicatorInsets.top = topInset
+        
+        // Left
+        messagesCollectionView.contentInset.left = insideContentInset.left + outsideContentInset.left
+        messagesCollectionView.scrollIndicatorInsets.left = outsideContentInset.left
+        
+        // Bottom
+        var bottom = messageCollectionViewBottomInset
+        bottom += outsideContentInset.bottom
+        messagesCollectionView.contentInset.bottom = bottom + insideContentInset.bottom
+        messagesCollectionView.scrollIndicatorInsets.bottom = bottom
+        
+        // Right
+        messagesCollectionView.contentInset.right = insideContentInset.right + outsideContentInset.right
+        messagesCollectionView.scrollIndicatorInsets.right = outsideContentInset.right
     }
 }
 

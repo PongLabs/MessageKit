@@ -90,7 +90,7 @@ open class MessagesCollectionViewFlowLayout: UICollectionViewFlowLayout {
     /// The width of an item in the `MessagesCollectionViewCell`.
     fileprivate var itemWidth: CGFloat {
         guard let collectionView = collectionView else { return 0 }
-        return collectionView.frame.width - sectionInset.left - sectionInset.right
+        return collectionView.frame.width - sectionInset.left - sectionInset.right - collectionView.contentInset.left - collectionView.contentInset.right
     }
 
     // MARK: - Initializers [Public]
