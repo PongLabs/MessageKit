@@ -107,6 +107,7 @@ extension AutocompleteManager: InputManager {
         let newAttributedString = NSMutableAttributedString(attributedString: textView.attributedText).normal(newText)
         textView.attributedText = newAttributedString
         reload()
+        inputTextView?.messageInputBar?.textViewDidChange()
     }
 }
 
@@ -114,24 +115,22 @@ extension AutocompleteManager: InputManager {
 fileprivate extension AutocompleteManager {
     
     func registerCurrentPrefix(to prefix: Character, at range: Range<Int>, word: String) {
-        defer {
-            delegate?.autocompleteManager(self, shouldBecomeVisible: true)
-        }
         guard delegate?.autocompleteManager(self, shouldRegister: prefix, at: range) != false else {
             return
         }
         (foundPrefix, foundPrefixRange, foundWord) = (prefix, range, word)
+        
+        delegate?.autocompleteManager(self, shouldBecomeVisible: true)
     }
     
     func unregisterCurrentPrefix() {
-        defer {
-            delegate?.autocompleteManager(self, shouldBecomeVisible: false)
-        }
         guard let prefix = foundPrefix,
             delegate?.autocompleteManager(self, shouldUnregister: prefix) != false
             else { return }
         
         (foundPrefixRange, foundPrefix, foundWord) = (nil, nil, nil)
+        
+        delegate?.autocompleteManager(self, shouldBecomeVisible: false)
     }
     
     /// Replaces the current prefix and filter text with the supplied text
@@ -148,20 +147,10 @@ fileprivate extension AutocompleteManager {
         
         // Appending a space should dismiss the auto complete
         let textToInsert = text + " "
-//        let filterText = "\(prefix)\(foundWord)"
-        
-        // Calculate the range to replace
-//        guard let leftIndex = textView.text.index(textView.text.startIndex, offsetBy: prefixRange.lowerBound, limitedBy: textView.text.endIndex),
-//            let rightIndex = textView.text.index(leftIndex, offsetBy: prefixRange.upperBound + foundWord.count, limitedBy: textView.text.endIndex)
-//            else { return }
-        
-//        let range = leftIndex...rightIndex
         
         // Insert the text
         let range = NSMakeRange(prefixRange.lowerBound, String(prefix).count + foundWord.count)
         textView.text = (textView.text as? NSString)?.replacingCharacters(in: range, with: textToInsert)
-        textView.messageInputBar?.textViewDidChange()
-//        textView.text.removeSubrange(range).replaceSubrange(range, with: textToInsert)
         
         // Apply the highlight attributes
         highlightSubstrings()
@@ -171,6 +160,9 @@ fileprivate extension AutocompleteManager {
         
         // Unregister
         unregisterCurrentPrefix()
+        
+        // Notify the input bar that content has changed
+//        textView.messageInputBar?.textViewDidChange()
     }
     
     private func processTextForAutoCompletion() {
@@ -178,7 +170,6 @@ fileprivate extension AutocompleteManager {
         inputTextView?.lookFor(prefixes: Set(autocompletePrefixes)) { (prefix, word) in
             guard let prefix = prefix, let word = word else {
                 unregisterCurrentPrefix()
-                (foundPrefix, foundWord, foundPrefixRange) = (nil, nil, nil)
                 return
             }
             let prefixLength = String(prefix).count
