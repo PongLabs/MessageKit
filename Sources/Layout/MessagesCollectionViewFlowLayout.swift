@@ -35,9 +35,15 @@ open class MessagesCollectionViewFlowLayout: UICollectionViewFlowLayout {
     ///
     /// The default value of this property is `UIFont.preferredFont(forTextStyle: .body)`
     open var messageLabelFont: UIFont {
-        didSet {
-            emojiLabelFont = messageLabelFont.withSize(2 * messageLabelFont.pointSize)
-        }
+        didSet { updateEmojiLabelFontIfNecessary() }
+    }
+    
+    /// Font to be used by `TextMessageCell` for `MessageData.emoji(String)` case.
+    open var emojiLabelFont: UIFont
+    
+    /// Multiplier used to set the `emojiLabelFont`. Default is 2.
+    open var emojiLabelFontMultiplier: CGFloat = 2 {
+        didSet { updateEmojiLabelFontIfNecessary() }
     }
 
     /// Determines the maximum number of `MessageCollectionViewCell` attributes to cache.
@@ -51,11 +57,6 @@ open class MessagesCollectionViewFlowLayout: UICollectionViewFlowLayout {
     }
     
     // MARK: - Properties [Private]
-    
-    /// Font to be used by `TextMessageCell` for `MessageData.emoji(String)` case.
-    ///
-    /// The default value of this property is 2x the `messageLabelFont`.
-    private var emojiLabelFont: UIFont
 
     typealias MessageID = String
     
@@ -98,9 +99,11 @@ open class MessagesCollectionViewFlowLayout: UICollectionViewFlowLayout {
     public override init() {
 
         messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
-        emojiLabelFont = messageLabelFont.withSize(2 * messageLabelFont.pointSize)
+        emojiLabelFont = messageLabelFont
 
         super.init()
+        
+        updateEmojiLabelFontIfNecessary()
 
         sectionInset = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
 
@@ -195,6 +198,12 @@ open class MessagesCollectionViewFlowLayout: UICollectionViewFlowLayout {
         return CGSize(width: itemWidth, height: attributes.itemHeight)
     }
 
+    
+    /// Updates the emoji label font using the `emojiLabelFontMultiplier`.
+    private func updateEmojiLabelFontIfNecessary() {
+        guard emojiLabelFontMultiplier > 0 else { return }
+        emojiLabelFont = messageLabelFont.withSize(emojiLabelFontMultiplier * messageLabelFont.pointSize)
+    }
 }
 
 // MARK: - Calculating MessageIntermediateLayoutAttributes

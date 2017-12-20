@@ -37,6 +37,10 @@ open class MessagesCollectionView: UICollectionView {
     open weak var messageCellDelegate: MessageCellDelegate?
 
     open var showsDateHeaderAfterTimeInterval: TimeInterval = 3600
+    
+    open var layout: MessagesCollectionViewFlowLayout? {
+        return collectionViewLayout as? MessagesCollectionViewFlowLayout
+    }
 
     private var indexPathForLastItem: IndexPath? {
 
