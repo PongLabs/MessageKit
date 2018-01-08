@@ -33,7 +33,9 @@ open class AutocompleteManager: NSObject {
     
     open weak var delegate: AutocompleteManagerDelegate?
     
-    private(set) public weak var inputTextView: InputTextView?
+    private(set) public weak var inputTextView: UITextView?
+    
+    private(set) public weak var messageInputBar: MessageInputBar?
     
     /// The autocomplete table for prefixes
     open lazy var tableView: AutocompleteTableView = {
@@ -56,10 +58,11 @@ open class AutocompleteManager: NSObject {
     open var autocompletePrefixes: [Character] = []
     
     /// The default text attributes
-    open var defaultTextAttributes: [NSAttributedStringKey:Any] = [
-        .font : UIFont.preferredFont(forTextStyle: .body),
-        .foregroundColor : UIColor.black
-    ]
+    open lazy var defaultTextAttributes: [NSAttributedStringKey:Any] = {
+        let font = inputTextView?.font ?? UIFont.preferredFont(forTextStyle: .body)
+        let color = inputTextView?.textColor ?? UIColor.black
+        return [ .font : font, .foregroundColor : color ]
+    }()
     
     /// The text attributes applied to highlighted substrings for each prefix
     open var highlightedTextAttributes: [Character: [NSAttributedStringKey: Any]] = [
@@ -81,9 +84,15 @@ open class AutocompleteManager: NSObject {
     
     // MARK: - Initialization
     
-    public init(for textView: InputTextView) {
-        super.init()
+    public convenience init(for textView: InputTextView) {
+        self.init(for: textView, messageInputBar: textView.messageInputBar)
+    }
+    
+    public init(for textView: UITextView, messageInputBar: MessageInputBar? = nil) {
+        
         self.inputTextView = textView
+        self.messageInputBar = messageInputBar
+        super.init()
         
         NotificationCenter.default.addObserver(self, selector: #selector(self.textViewTextDidChangeNotification(_:)), name: .UITextViewTextDidChange, object: textView)
     }
@@ -104,10 +113,11 @@ extension AutocompleteManager: InputManager {
     
     open func handleInput(of object: AnyObject) {
         guard let newText = object as? String, let textView = inputTextView else { return }
-        let newAttributedString = NSMutableAttributedString(attributedString: textView.attributedText).normal(newText)
-        textView.attributedText = newAttributedString
+        
+        textView.insertText(newText)
+        
         reload()
-        inputTextView?.messageInputBar?.textViewDidChange()
+        messageInputBar?.textViewDidChange()
     }
 }
 
@@ -310,6 +320,6 @@ extension AutocompleteManager {
         resetTypingAttributes()
         
         // Process text
-        processTextForAutoCompletion()
+        reload()
     }
 }

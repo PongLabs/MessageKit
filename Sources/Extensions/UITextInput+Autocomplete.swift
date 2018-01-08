@@ -33,7 +33,7 @@ public protocol AutocompleteTextInput: UITextInput {
 }
 
 // MARK: - AutocompleteTextInput
-extension InputTextView: AutocompleteTextInput {
+extension UITextView: AutocompleteTextInput {
     
     // -----------------------------------
     // MARK: - Public Methods
