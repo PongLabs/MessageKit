@@ -291,7 +291,8 @@ fileprivate extension MessagesCollectionViewFlowLayout {
         case .text:
             attributes.messageLabelFont = messageLabelFont
         case .attributedText(let text):
-            guard let font = text.attribute(.font, at: 0, effectiveRange: nil) as? UIFont else { return }
+            guard text.string.count > 0,
+                let font = text.attribute(.font, at: 0, effectiveRange: nil) as? UIFont else { return }
             attributes.messageLabelFont = font
         default:
             break
@@ -395,8 +396,14 @@ private extension MessagesCollectionViewFlowLayout {
     /// - Parameters:
     ///   - attributes: The `MessageIntermediateLayoutAttributes` containing the `MessageType` object.
     func messageLabelInsets(for attributes: MessageIntermediateLayoutAttributes) -> UIEdgeInsets {
-        // Maybe check the message type here since insets only apply to text messages
-        return messagesLayoutDelegate.messageLabelInset(for: attributes.message, at: attributes.indexPath, in: messagesCollectionView)
+        switch attributes.message.data {
+        case .text(let text) where text.count > 0:
+            return messagesLayoutDelegate.messageLabelInset(for: attributes.message, at: attributes.indexPath, in: messagesCollectionView)
+        case .attributedText(let text) where text.string.count > 0:
+            return messagesLayoutDelegate.messageLabelInset(for: attributes.message, at: attributes.indexPath, in: messagesCollectionView)
+        default:
+            return .zero
+        }
     }
     
     // F
